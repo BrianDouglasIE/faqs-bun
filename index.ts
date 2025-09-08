@@ -6,7 +6,7 @@ import { Hono } from 'hono'
 import { delSession, getSession, newSession, registerUser, SESSION_TTL, verifyUserEmailAndPassword } from "./auth";
 import { userRepository } from "./repos/user-repo";
 
-import { registerViewDir, registerIncludeDir, view } from '@briandouglasie/literal-templates'
+import { registerViewDir, registerIncludeDir, view, create } from '@briandouglasie/literal-templates'
 
 await registerViewDir('./views', false)
 await registerIncludeDir('./views/includes')
@@ -22,15 +22,23 @@ const app = new Hono()
 app.route('/', projects)
 app.get('/', (c) => c.html(view('guest', { $content: view('index') })))
 
+app.get("/register", (c) => c.html(view('guest', { $content: view('register') })))
 app.post("/register", async (c) => {
-    const { email, password } = await c.req.json();
-    if (!email || !password || password.length < 8) return c.json({ error: "invalid" }, 400);
+    const formData = await c.req.formData();
+    const password = formData.get('password')?.toString()
+    const confirm_password = formData.get('confirm_password')?.toString()
+    const email = formData.get('email')?.toString()
+    if (!email || !password || password.length < 8 || confirm_password != password) return c.json({ error: "invalid" }, 400);
     const ok = await registerUser(email.toLowerCase(), password);
     return ok ? c.json({ ok: true }) : c.json({ error: "exists" }, 409);
 });
 
+app.get("/login", (c) => c.html(view('guest', { $content: view('login') })))
 app.post("/login", async (c) => {
-    const { email, password } = await c.req.json();
+    const formData = await c.req.formData();
+    const password = formData.get('password')?.toString()
+    const email = formData.get('email')?.toString()
+    if (!email || !password) return c.json({ error: "invalid" }, 401);
     const r = await verifyUserEmailAndPassword(email.toLowerCase(), password);
     if (!r.ok || !r.id) return c.json({ error: r.reason ?? "invalid" }, 401);
 
