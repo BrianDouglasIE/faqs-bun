@@ -7,6 +7,8 @@ import { delSession, getSession, newSession, registerUser, SESSION_TTL, verifyUs
 import { userRepository } from "./repos/user-repo";
 
 import { registerViewDir, registerIncludeDir, view, create } from '@briandouglasie/literal-templates'
+import { createFieldValidator, stringValidators } from "./form-validation";
+import { UserForm } from "./models/user";
 
 await registerViewDir('./views', false)
 await registerIncludeDir('./views/includes')
@@ -22,14 +24,22 @@ const app = new Hono()
 app.route('/', projects)
 app.get('/', (c) => c.html(view('guest', { $content: view('index') })))
 
+const userFormValidator = createFieldValidator<UserForm>({
+    email: [stringValidators.email((email: string) => `${email} is not a valid email address`)],
+    password: [
+        stringValidators.min(8, () => `Password must be greater than 8 characters in length`),
+        stringValidators.max(250, () => `Password must be less than 8 characters in length`),
+    ]
+})
+
 app.get("/register", (c) => c.html(view('guest', { $content: view('register') })))
 app.post("/register", async (c) => {
     const formData = await c.req.formData();
-    const password = formData.get('password')?.toString()
-    const confirm_password = formData.get('confirm_password')?.toString()
-    const email = formData.get('email')?.toString()
-    if (!email || !password || password.length < 8 || confirm_password != password) return c.json({ error: "invalid" }, 400);
-    const ok = await registerUser(email.toLowerCase(), password);
+    const userForm = UserForm.fromFormData(formData)
+    const { input, errors, hasErrors } = userFormValidator(userForm)
+    if (hasErrors) return c.json({ error: errors }, 400);
+    if (userForm.confirmPassword != userForm.password) return c.json({ error: "passwords dinny match" }, 400);
+    const ok = await registerUser(input.email.toLowerCase(), input.password);
     return ok ? c.json({ ok: true }) : c.json({ error: "exists" }, 409);
 });
 
