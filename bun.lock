@@ -4,6 +4,7 @@
     "": {
       "name": "quickfaqs",
       "dependencies": {
+        "@briandouglasie/literal-templates": "^1.0.2",
         "@faker-js/faker": "^10.0.0",
         "hono": "^4.9.6",
       },
@@ -16,6 +17,8 @@
     },
   },
   "packages": {
+    "@briandouglasie/literal-templates": ["@briandouglasie/literal-templates@1.0.2", "", {}, "sha512-jdICHhf7DtXTYZrG0Q/jIEtvnSUC7uytJKJ8R44fSQSAQ1fs/82I3aG/0pSaS1wRBIYPIEhFatueqYbhwISS6A=="],
+
     "@faker-js/faker": ["@faker-js/faker@10.0.0", "", {}, "sha512-UollFEUkVXutsaP+Vndjxar40Gs5JL2HeLcl8xO1QAjJgOdhc3OmBFWyEylS+RddWaaBiAzH+5/17PLQJwDiLw=="],
 
     "@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],

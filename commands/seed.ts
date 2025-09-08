@@ -1,11 +1,11 @@
+import { registerUser } from "../auth";
 import { db } from "../db/db";
 import { answers, projects, questions, users } from '../db/seeder';
 import type { answers_table, project_users_table, projects_table, questions_table } from "../sqlite-table-defs";
 
 if ((db.query(`SELECT COUNT(id) AS userCount FROM users;`).get() as any).userCount === 0) {
-    const userInsert = db.prepare(`INSERT INTO users(email, password) VALUES ($name, $email);`);
     for (const { email, password } of users) {
-        userInsert.run(email, password);
+        await registerUser(email, password)
     }
 }
 

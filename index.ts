@@ -3,6 +3,13 @@ import { db } from "./db/db";
 import type { projects_table } from "./sqlite-table-defs";
 
 import { Hono } from 'hono'
+import { delSession, getSession, newSession, registerUser, SESSION_TTL, verifyUserEmailAndPassword } from "./auth";
+import { userRepository } from "./repos/user-repo";
+
+import { registerViewDir, registerIncludeDir, view } from '@briandouglasie/literal-templates'
+
+await registerViewDir('./views', false)
+await registerIncludeDir('./views/includes')
 
 const projects = new Hono().basePath('/projects')
 projects.get('/', (c) => {
@@ -13,7 +20,43 @@ projects.get('/', (c) => {
 
 const app = new Hono()
 app.route('/', projects)
-app.get('/', (c) => c.text('Hello Bun!'))
+app.get('/', (c) => c.html(view('guest', { $content: view('index') })))
 
+app.post("/register", async (c) => {
+    const { email, password } = await c.req.json();
+    if (!email || !password || password.length < 8) return c.json({ error: "invalid" }, 400);
+    const ok = await registerUser(email.toLowerCase(), password);
+    return ok ? c.json({ ok: true }) : c.json({ error: "exists" }, 409);
+});
+
+app.post("/login", async (c) => {
+    const { email, password } = await c.req.json();
+    const r = await verifyUserEmailAndPassword(email.toLowerCase(), password);
+    if (!r.ok || !r.id) return c.json({ error: r.reason ?? "invalid" }, 401);
+
+    const sess = newSession(r.id);
+    c.header("set-cookie", `sid=${sess.token}; HttpOnly; Path=/; Max-Age=${SESSION_TTL}`);
+    return c.json({ ok: true });
+});
+
+app.post("/logout", (c) => {
+    const cookie = c.req.header("cookie") ?? "";
+    const sid = cookie.split(";").find((x) => x.trim().startsWith("sid="))?.split("=")[1];
+    if (sid) delSession(sid);
+    c.header("set-cookie", "sid=; Max-Age=0; Path=/");
+    return c.json({ ok: true });
+});
+
+app.get("/profile", (c) => {
+    const cookie = c.req.header("cookie") ?? "";
+    const sid = cookie.split(";").find((x) => x.trim().startsWith("sid="))?.split("=")[1];
+    if (!sid) return c.json({ error: "unauth" }, 401);
+    const sess = getSession(sid);
+    if (!sess) return c.json({ error: "unauth" }, 401);
+    const row = userRepository.selectUserById.get(sess.user_id);
+    if (!row) return c.json({ error: "notfound" }, 404);
+    const { id, email } = row;
+    return c.json({ id, email });
+});
 
 export default app
